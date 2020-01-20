@@ -1,0 +1,8 @@
+name = "polyfill"
+type = "webpack"
+account_id = "2dedaaec935707838fdccdc4bab7f1d1"
+workers_dev = true
+kv-namespaces = [
+    {"id" = "69979c9409a24636b4e05709e367bc41","binding" = "TOML_KV"},
+    {"id" = "e1acc199504c4bff9593c8d55342902c","binding" = "POLYFILL_KV"},
+]

@@ -1,0 +1,31 @@
+{
+  "name": "polyfill-io-cloudfare-worker",
+  "description": "A polyfill service using cloudfare worker",
+  "version": "1.0.0",
+  "main": "dist/worker.js",
+  "repository": "https://github.com/asvny/polyfill-io-cloudfare-worker.git",
+  "author": "asvny <annamalai.saro@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "worker:preview": "npx wrangler preview --watch",
+    "build": "npx webpack",
+    "dev": "NODE_ENV=development npm run build",
+    "format": "prettier --write '**/*.{ts,js,css,json,md}'"
+  },
+  "dependencies": {
+    "polyfill-library": "^3.42.0",
+    "ua-parser-js": "^0.7.21"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^1.0.1",
+    "@cloudflare/wrangler": "^1.6.0",
+    "prettier": "^1.18.2",
+    "rimraf": "^3.0.0",
+    "source-map-loader": "^0.2.4",
+    "source-map-support": "^0.5.12",
+    "ts-loader": "^6.0.4",
+    "typescript": "^3.5.3",
+    "webpack": "^4.41.5",
+    "webpack-cli": "^3.3.10"
+  }
+}

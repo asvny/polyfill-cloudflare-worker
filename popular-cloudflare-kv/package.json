@@ -1,0 +1,19 @@
+{
+  "name": "populate-cloudfare-kv",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "asvny",
+  "license": "MIT",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "glob": "^7.1.6",
+    "globby": "^11.0.0",
+    "lz-string": "^1.4.4",
+    "node-fetch": "^2.6.0",
+    "polyfill-library": "^3.42.0",
+    "require-all": "^3.0.0",
+    "just-split": "*"
+  }
+}

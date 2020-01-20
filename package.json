@@ -1,0 +1,18 @@
+{
+  "name": "polyfill-io-cloudflare-worker",
+  "description": "A polyfill service using cloudflare worker",
+  "version": "1.0.0",
+  "main": "dist/worker.js",
+  "repository": "https://github.com/asvny/polyfill.io-cloudfare-worker.git",
+  "author": "asvny <annamalai.saro@gmail.com>",
+  "license": "MIT",
+  "scripts": {},
+  "workspaces": [
+    "worker",
+    "polyfill-library",
+    "populate-cloudflare-kv"
+  ],
+  "private": true,
+  "dependencies": {},
+  "devDependencies": {}
+}
