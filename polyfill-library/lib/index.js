@@ -15,7 +15,6 @@ const cache = new LRUCache(1000);
 
 module.exports = {
 	listAliases,
-	listAllPolyfills,
 	describePolyfill,
 	getOptions,
 	getPolyfills,
@@ -29,14 +28,6 @@ module.exports = {
  */
 function listAliases() {
 	return sources.listAliases();
-}
-
-/**
- * Get a list of all the polyfills which exist within the collection of polyfill sources.
- * @returns {Promise<Array>} A promise which resolves with an array of all the polyfills within the collection.
- */
-function listAllPolyfills() {
-	return sources.listPolyfills();
 }
 
 /**
@@ -119,7 +110,7 @@ function getPolyfills(opts) {
 	// Filter the features object to remove features not suitable for the current UA
 	const filterForUATargeting = features => {
 		const featuresList = Object.keys(features);
-		console.log(featuresList)
+
 		return Promise.all(
 			featuresList.map(featureName => {
 				return sources.getPolyfillMeta(featureName).then(meta => {
@@ -219,162 +210,160 @@ async function getPolyfillString(opts) {
 		"Using the `all` alias with polyfill.io is a very bad idea. In a future version of the service, `all` will deliver the same behaviour as `default`, so we recommend using `default` instead.";
 	const output = mergeStream();
 	const explainerComment = [];
+
 	// Build a polyfill bundle of polyfill sources sorted in dependency order
+	getPolyfills(options).then(targetedFeatures => {
+		const warnings = {
+			unknown: []
+		};
+		const featureNodes = [];
+		const featureEdges = [];
 
-	console.log('\n')
-	console.log(await getPolyfills(options))
-	// getPolyfills(options).then(targetedFeatures => {
-	// 	const warnings = {
-	// 		unknown: []
-	// 	};
-	// 	const featureNodes = [];
-	// 	const featureEdges = [];
+		Promise.all(Object.keys(targetedFeatures).map(featureName => {
+			const feature = targetedFeatures[featureName];
+			return sources.getPolyfillMeta(featureName).then(polyfill => {
+				if (!polyfill) {
+					warnings.unknown.push(featureName);
+				} else {
+					featureNodes.push(featureName);
 
-	// 	Promise.all(Object.keys(targetedFeatures).map(featureName => {
-	// 		const feature = targetedFeatures[featureName];
-	// 		return sources.getPolyfillMeta(featureName).then(polyfill => {
-	// 			if (!polyfill) {
-	// 				warnings.unknown.push(featureName);
-	// 			} else {
-	// 				featureNodes.push(featureName);
+					if (polyfill.dependencies) {
+						polyfill.dependencies.forEach(depName => {
+							if (depName in targetedFeatures) {
+								featureEdges.push([depName, featureName]);
+							}
+						});
+					}
 
-	// 				if (polyfill.dependencies) {
-	// 					polyfill.dependencies.forEach(depName => {
-	// 						if (depName in targetedFeatures) {
-	// 							featureEdges.push([depName, featureName]);
-	// 						}
-	// 					});
-	// 				}
+					feature.comment =
+						featureName +
+						", License: " +
+						(polyfill.license || "CC0") +
+						(feature.aliasOf && feature.aliasOf.size ?
+							' (required by "' +
+							Array.from(feature.aliasOf).join('", "') +
+							'")' :
+							"");
+				}
+			});
+		})).then(() => {
+			// Sort the features alphabetically, so ones with no dependencies
+			// turn up in the same order
+			featureNodes.sort((a, b) => a.localeCompare(b));
+			featureEdges.sort(([, a], [, b]) => a.localeCompare(b));
 
-	// 				feature.comment =
-	// 					featureName +
-	// 					", License: " +
-	// 					(polyfill.license || "CC0") +
-	// 					(feature.aliasOf && feature.aliasOf.size ?
-	// 						' (required by "' +
-	// 						Array.from(feature.aliasOf).join('", "') +
-	// 						'")' :
-	// 						"");
-	// 			}
-	// 		});
-	// 	})).then(() => {
-	// 		// Sort the features alphabetically, so ones with no dependencies
-	// 		// turn up in the same order
-	// 		featureNodes.sort((a, b) => a.localeCompare(b));
-	// 		featureEdges.sort(([, a], [, b]) => a.localeCompare(b));
+			const sortedFeatures = toposort(featureNodes, featureEdges);
 
-	// 		const sortedFeatures = toposort(featureNodes, featureEdges);
+			if (!options.minify) {
+				explainerComment.push(
+					"Polyfill service " +
+					(process.env.NODE_ENV === "production" ?
+						"v" + appVersion :
+						"DEVELOPMENT MODE - for live use set NODE_ENV to 'production'"),
+					"For detailed credits and licence information see https://github.com/financial-times/polyfill-service.",
+					"",
+					"Features requested: " + Object.keys(options.features),
+					""
+				);
+				explainerComment.push(
+					...sortedFeatures
+						.filter(
+							featureName =>
+								targetedFeatures[featureName] &&
+								targetedFeatures[featureName].comment
+						)
+						.map(featureName => "- " + targetedFeatures[featureName].comment)
+				);
+				if (warnings.unknown.length) {
+					explainerComment.push(
+						"",
+						"These features were not recognised:",
+						warnings.unknown.map(s => "- " + s)
+					);
+				}
+				if ("all" in options.features) {
+					explainerComment.push("", allWarnText);
+				}
+			} else {
+				explainerComment.push(
+					"Disable minification (remove `.min` from URL path) for more info"
+				);
+			}
+			output.add(
+				streamFromString("/* " + explainerComment.join("\n * ") + " */\n\n")
+			);
 
-	// 		if (!options.minify) {
-	// 			explainerComment.push(
-	// 				"Polyfill service " +
-	// 				(process.env.NODE_ENV === "production" ?
-	// 					"v" + appVersion :
-	// 					"DEVELOPMENT MODE - for live use set NODE_ENV to 'production'"),
-	// 				"For detailed credits and licence information see https://github.com/financial-times/polyfill-service.",
-	// 				"",
-	// 				"Features requested: " + Object.keys(options.features),
-	// 				""
-	// 			);
-	// 			explainerComment.push(
-	// 				...sortedFeatures
-	// 					.filter(
-	// 						featureName =>
-	// 							targetedFeatures[featureName] &&
-	// 							targetedFeatures[featureName].comment
-	// 					)
-	// 					.map(featureName => "- " + targetedFeatures[featureName].comment)
-	// 			);
-	// 			if (warnings.unknown.length) {
-	// 				explainerComment.push(
-	// 					"",
-	// 					"These features were not recognised:",
-	// 					warnings.unknown.map(s => "- " + s)
-	// 				);
-	// 			}
-	// 			if ("all" in options.features) {
-	// 				explainerComment.push("", allWarnText);
-	// 			}
-	// 		} else {
-	// 			explainerComment.push(
-	// 				"Disable minification (remove `.min` from URL path) for more info"
-	// 			);
-	// 		}
-	// 		output.add(
-	// 			streamFromString("/* " + explainerComment.join("\n * ") + " */\n\n")
-	// 		);
+			if (sortedFeatures.length) {
+				// Outer closure hides private features from global scope
+				output.add(streamFromString("(function(undefined) {" + lf));
 
-	// 		if (sortedFeatures.length) {
-	// 			// Outer closure hides private features from global scope
-	// 			output.add(streamFromString("(function(undefined) {" + lf));
+				// Using the graph, stream all the polyfill sources in dependency order
+				for (const featureName of sortedFeatures) {
+					const detect = sources
+						.getPolyfillMeta(featureName)
+						.then(meta => {
+							if (meta.detectSource) {
+								return "if (!(" + meta.detectSource + ")) {" + lf;
+							} else {
+								return "";
+							}
+						});
+					const wrapInDetect = targetedFeatures[featureName].flags.has(
+						"gated"
+					);
+					if (wrapInDetect) {
+						output.add(streamFromPromise(detect));
+						output.add(
+							sources.streamPolyfillSource(
+								featureName,
+								options.minify ? "min" : "raw"
+							)
+						);
+						output.add(streamFromPromise(detect.then(wrap => {
+							if (wrap) {
+								return (lf + "}" + lf + lf);
+							}
+						})));
+					} else {
+						output.add(
+							sources.streamPolyfillSource(
+								featureName,
+								options.minify ? "min" : "raw"
+							)
+						);
+					}
+				}
+				// Invoke the closure, binding `this` to window (in a browser),
+				// self (in a web worker), or global (in Node/IOjs)
+				output.add(
+					streamFromString(
+						"})" +
+						lf +
+						".call('object' === typeof window && window || 'object' === typeof self && self || 'object' === typeof global && global || {});" +
+						lf
+					)
+				);
+			} else {
+				if (!options.minify) {
+					output.add(
+						streamFromString(
+							"\n/* No polyfills found for current settings */\n\n"
+						)
+					);
+				}
+			}
 
-	// 			// Using the graph, stream all the polyfill sources in dependency order
-	// 			for (const featureName of sortedFeatures) {
-	// 				const detect = sources
-	// 					.getPolyfillMeta(featureName)
-	// 					.then(meta => {
-	// 						if (meta.detectSource) {
-	// 							return "if (!(" + meta.detectSource + ")) {" + lf;
-	// 						} else {
-	// 							return "";
-	// 						}
-	// 					});
-	// 				const wrapInDetect = targetedFeatures[featureName].flags.has(
-	// 					"gated"
-	// 				);
-	// 				if (wrapInDetect) {
-	// 					output.add(streamFromPromise(detect));
-	// 					output.add(
-	// 						sources.streamPolyfillSource(
-	// 							featureName,
-	// 							options.minify ? "min" : "raw"
-	// 						)
-	// 					);
-	// 					output.add(streamFromPromise(detect.then(wrap => {
-	// 						if (wrap) {
-	// 							return (lf + "}" + lf + lf);
-	// 						}
-	// 					})));
-	// 				} else {
-	// 					output.add(
-	// 						sources.streamPolyfillSource(
-	// 							featureName,
-	// 							options.minify ? "min" : "raw"
-	// 						)
-	// 					);
-	// 				}
-	// 			}
-	// 			// Invoke the closure, binding `this` to window (in a browser),
-	// 			// self (in a web worker), or global (in Node/IOjs)
-	// 			output.add(
-	// 				streamFromString(
-	// 					"})" +
-	// 					lf +
-	// 					".call('object' === typeof window && window || 'object' === typeof self && self || 'object' === typeof global && global || {});" +
-	// 					lf
-	// 				)
-	// 			);
-	// 		} else {
-	// 			if (!options.minify) {
-	// 				output.add(
-	// 					streamFromString(
-	// 						"\n/* No polyfills found for current settings */\n\n"
-	// 					)
-	// 				);
-	// 			}
-	// 		}
+			if ("all" in options.features) {
+				output.add(
+					streamFromString("\nconsole.log('" + allWarnText + "');\n")
+				);
+			}
 
-	// 		if ("all" in options.features) {
-	// 			output.add(
-	// 				streamFromString("\nconsole.log('" + allWarnText + "');\n")
-	// 			);
-	// 		}
-
-	// 		if (options.callback) {
-	// 			output.add(streamFromString("\ntypeof " + options.callback + "==='function' && " + options.callback + "();"));
-	// 		}
-	// 	});
-	// });
+			if (options.callback) {
+				output.add(streamFromString("\ntypeof " + options.callback + "==='function' && " + options.callback + "();"));
+			}
+		});
+	});
 
 	return opts.stream ? output : Promise.resolve(streamToString(output));
 };

@@ -1,4 +1,5 @@
 "use strict";
+/*global TOML_KV, POLYFILL_KV*/
 
 const LRUCache = require('mnemonist/lru-cache');
 const StreamCache = require('stream-cache');
@@ -8,12 +9,12 @@ const polyfillSourceCache = new LRUCache(1000);
 const TOML = require('@iarna/toml');
 const aliasesFile = require('./aliasesFile');
 
-const tomls = async function (feature) {
-	return TOML_KV.get(feature)
+const tomlSource = async function (feature) {
+	return TOML_KV.get(feature);
 };
 
-const min = async function (feature) {
-	return POLYFILL_KV.get(feature)
+const polyfillSource = async function (feature) {
+	return POLYFILL_KV.get(feature);
 };
 
 /**
@@ -24,7 +25,7 @@ const min = async function (feature) {
 function getPolyfillMeta(featureName) {
 	let meta = polyfillMetaCache.get(featureName);
 	if (meta === undefined) {
-		meta = Promise.resolve(tomls[featureName]).then(TOML.parse)
+		meta = Promise.resolve(tomlSource(featureName)).then(TOML.parse)
 			.catch(() => undefined);
 		polyfillMetaCache.set(featureName, meta);
 	}
@@ -32,24 +33,11 @@ function getPolyfillMeta(featureName) {
 }
 
 /**
- * Get a list of all the polyfills which exist within the collection of polyfill sources.
- * @returns {Promise<Array>} A promise which resolves with an array of all the polyfills within the collection.
- */
-const listPolyfills = (function () {
-	// const features = readdir(polyfillDirectory).then(features =>
-	// 	features.filter(f => f.indexOf(".toml") === -1)
-	// );
-	return function listPolyfills() {
-		// return features;
-	};
-}());
-
-/**
  * Get a list of all the polyfill aliases which exist within the collection of polyfill sources.
  * @returns {Promise<Array>} A promise which resolves with an object of all the polyfill aliases within the collection.
  */
 const listAliases = (function () {
-	const aliases = Promise.resolve(aliasesFile)//.then(TOML.parse);
+	const aliases = Promise.resolve(aliasesFile);
 	return function listAliases() {
 		return aliases;
 	};
@@ -70,16 +58,14 @@ function getConfigAliases(alias) {
  * @param {'min'|'raw'} type - Which implementation should be returned: minified or raw implementation.
  * @returns {ReadStream} A ReadStream instance of the polyfill implementation as a utf-8 string.
  */
-function streamPolyfillSource(featureName, type) {
+async function streamPolyfillSource(featureName, type) {
 	const key = featureName + '.' + type;
 	let source = polyfillSourceCache.get(key);
 	if (source === undefined) {
 		source = new StreamCache();
-		let v = min(featureName);
-		console.log(v);
-		v.then(console.log)
+		const content = await polyfillSource(featureName);
 		streamFromPromise(
-			v
+			content
 		).pipe(source);
 		polyfillSourceCache.set(key, source);
 	}
@@ -90,6 +76,5 @@ module.exports = {
 	streamPolyfillSource,
 	getConfigAliases,
 	listAliases,
-	listPolyfills,
 	getPolyfillMeta
 };
