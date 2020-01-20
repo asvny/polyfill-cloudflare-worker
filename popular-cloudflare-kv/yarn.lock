@@ -158,6 +158,11 @@ dir-glob@^3.0.1:
   dependencies:
     path-type "^4.0.0"
 
+dotenv@^8.2.0:
+  version "8.2.0"
+  resolved "https://registry.yarnpkg.com/dotenv/-/dotenv-8.2.0.tgz#97e619259ada750eea3e4ea3e26bceea5424b16a"
+  integrity sha512-8sJ78ElpbDJBHNeBzUbUVLsqKdccaa/BXF1uPTw3GrvQTBgrQrtObr2mUrE38vzYd8cEv+m/JBfDLioYcfXoaw==
+
 event-source-polyfill@^0.0.9:
   version "0.0.9"
   resolved "https://registry.yarnpkg.com/event-source-polyfill/-/event-source-polyfill-0.0.9.tgz#18c6205d170ab09db889ffceaa33f0e493f14a50"
@@ -337,6 +342,11 @@ json3@^3.3.2:
   version "3.3.3"
   resolved "https://registry.yarnpkg.com/json3/-/json3-3.3.3.tgz#7fc10e375fc5ae42c4705a5cc0aa6f62be305b81"
   integrity sha512-c7/8mbUsKigAbLkD5B010BK4D9LZm7A1pNItkEwiUZRpIN66exu/e7YQWysGun+TRKaJp8MhemM+VkfWv42aCA==
+
+just-split@*:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/just-split/-/just-split-2.1.0.tgz#a34904416ce5b2c43c91c0f48ea034f897219de0"
+  integrity sha512-nCO24iOS6X8iZA6iVxEEOvXLMju5ebL0WuQVpiXANJH5UxQ3G4sxvc2fxSpLqEF4IoY+bAPgFKkjkLFrDbX6nw==
 
 kind-of@^3.0.2:
   version "3.2.2"

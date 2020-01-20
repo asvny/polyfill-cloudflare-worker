@@ -1,3 +1,4 @@
+import {} from '@cloudflare/workers-types'
 import * as pkg from '../package.json'
 import * as polyfillLibrary from 'polyfill-library'
 import * as UAParser from 'ua-parser-js'
@@ -83,20 +84,22 @@ async function handlePolyfill(
 
   try {
     if (!response) {
-      console.time()
       let polyfillString = await getPolyfillBundle(json)
-      console.timeEnd()
-
-      //let { readable, writable } = new TransformStream();
 
       response = new Response(polyfillString, {
         headers: {
           ...headers,
           ETag: `W/"${KEY}"`,
-          // Vary: `User-Agent`,
         },
       })
-      // event.waitUntil(cache.put(cacheKey, response.clone()))
+
+      event.waitUntil(cache.put(cacheKey, response.clone()))
+    }
+
+    let ifNoneMatch = request.headers.get('if-none-match')
+    let cachedEtag = response.headers.get('etag')
+    if (ifNoneMatch == cachedEtag) {
+      return new Response(null, { status: 304 })
     }
 
     return response
@@ -198,73 +201,10 @@ function uniqueArray<T extends string, int>(array: T[]): T[] {
 
 async function hash(object: object): Promise<string> {
   const msgBuffer = new TextEncoder().encode(JSON.stringify(object))
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer)
+  const hashBuffer = await crypto.subtle.digest('SHA-1', msgBuffer)
 
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   const hashHex = hashArray.map(b => ('00' + b.toString(16)).slice(-2)).join('')
 
   return hashHex
-}
-
-var toString = Object.prototype.toString
-
-/**
- * Generate an entity tag.
- *
- * @param {Buffer|string} entity
- * @return {string}
- * @private
- */
-
-async function entitytag(entity: any) {
-  const msgBuffer = new TextEncoder().encode(entity)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer)
-
-  const hashArray = Array.from(new Uint8Array(hashBuffer))
-  const hashHex = hashArray.map(b => ('00' + b.toString(16)).slice(-2)).join('')
-
-  // compute hash of entity
-  var hash = btoa(hashHex).substring(0, 27)
-
-  //compute length of entity
-  var len = typeof entity === 'string' ? msgBuffer.length : entity.length
-
-  return '"' + len.toString(16) + '-' + hash + '"'
-}
-
-/**
- * Create a simple ETag.
- *
- * @param {string|Buffer|Stats} entity
- * @param {object} [options]
- * @param {boolean} [options.weak]
- * @return {String}
- * @public
- */
-
-function isBuffer(obj: any) {
-  return (
-    obj != null &&
-    obj.constructor != null &&
-    typeof obj.constructor.isBuffer === 'function' &&
-    obj.constructor.isBuffer(obj)
-  )
-}
-
-async function etag(entity: string, options: any) {
-  if (entity == null) {
-    throw new TypeError('argument entity is required')
-  }
-
-  var weak = options.weak || true
-
-  // validate argument
-  if (typeof entity !== 'string' && !isBuffer(entity)) {
-    throw new TypeError('argument entity must be string, Buffer')
-  }
-
-  // generate entity tag
-  var tag = await entitytag(entity)
-
-  return weak ? 'W/' + tag : tag
 }

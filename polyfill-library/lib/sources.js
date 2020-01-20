@@ -9,11 +9,11 @@ const polyfillSourceCache = new LRUCache(1000);
 const TOML = require('@iarna/toml');
 const aliasesFile = require('./aliasesFile');
 
-const tomlSource = async function (feature) {
+const tomlStore = async function (feature) {
 	return TOML_KV.get(feature);
 };
 
-const polyfillSource = async function (feature) {
+const scriptStore = async function (feature) {
 	return POLYFILL_KV.get(feature);
 };
 
@@ -25,7 +25,7 @@ const polyfillSource = async function (feature) {
 function getPolyfillMeta(featureName) {
 	let meta = polyfillMetaCache.get(featureName);
 	if (meta === undefined) {
-		meta = Promise.resolve(tomlSource(featureName)).then(TOML.parse)
+		meta = Promise.resolve(tomlStore(featureName)).then(TOML.parse)
 			.catch(() => undefined);
 		polyfillMetaCache.set(featureName, meta);
 	}
@@ -58,12 +58,12 @@ function getConfigAliases(alias) {
  * @param {'min'|'raw'} type - Which implementation should be returned: minified or raw implementation.
  * @returns {ReadStream} A ReadStream instance of the polyfill implementation as a utf-8 string.
  */
-async function streamPolyfillSource(featureName, type) {
+function streamPolyfillSource(featureName, type) {
 	const key = featureName + '.' + type;
 	let source = polyfillSourceCache.get(key);
 	if (source === undefined) {
 		source = new StreamCache();
-		const content = await polyfillSource(featureName);
+		let content = scriptStore(featureName);
 		streamFromPromise(
 			content
 		).pipe(source);

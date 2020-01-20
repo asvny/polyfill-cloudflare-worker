@@ -8,12 +8,13 @@
     "start": "node index.js"
   },
   "dependencies": {
+    "dotenv": "^8.2.0",
     "glob": "^7.1.6",
     "globby": "^11.0.0",
+    "just-split": "*",
     "lz-string": "^1.4.4",
     "node-fetch": "^2.6.0",
     "polyfill-library": "^3.42.0",
-    "require-all": "^3.0.0",
-    "just-split": "*"
+    "require-all": "^3.0.0"
   }
 }

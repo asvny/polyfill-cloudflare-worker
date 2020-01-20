@@ -1,3 +1,4 @@
+import {} from '@cloudflare/workers-types'
 import * as pkg from '../package.json'
 import * as UAParser from 'ua-parser-js'
 
@@ -16,6 +17,8 @@ interface PolyFillOptions {
 const HOST = 'https://polyfill-clouldfare-workers.io/'
 
 addEventListener('fetch', (event: FetchEvent) => {
+  event.passThroughOnException()
+
   let url = new URL(event.request.url)
   let page = url.pathname.slice(1)
   let isPolyFillRoute = page.startsWith('polyfill.')
@@ -91,6 +94,13 @@ async function handlePolyfill(
       })
 
       event.waitUntil(cache.put(cacheKey, response.clone()))
+    }
+
+    let ifNoneMatch = request.headers.get('if-none-match')
+    let cachedEtag = response.headers.get('etag')
+
+    if (ifNoneMatch == cachedEtag) {
+      return new Response(null, { status: 304 })
     }
 
     return response
@@ -188,7 +198,7 @@ function uniqueArray<T extends string, int>(array: T[]): T[] {
 
 async function hash(object: object): Promise<string> {
   const msgBuffer = new TextEncoder().encode(JSON.stringify(object))
-  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer)
+  const hashBuffer = await crypto.subtle.digest('SHA-1', msgBuffer)
 
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   const hashHex = hashArray.map(b => ('00' + b.toString(16)).slice(-2)).join('')
