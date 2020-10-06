@@ -8,7 +8,7 @@ Polyfill worker + Node.js - [https://polyfill-with-node.asvny.workers.dev](https
 
 ## About The Project
 
-A side post on how to implement the same functionality of Polyfill.io using Cloudflare Worker and Cloudflare KV Storage.
+An experimental project on how to implement the same functionality of Polyfill.io using Cloudflare Worker and Cloudflare KV Storage.
 > Please don't use this in production .. it is not as fast as original polyfill.io
 
 ### Worker
